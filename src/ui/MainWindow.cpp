@@ -4,8 +4,6 @@
 #include "ui/MaterialEditor.h"
 #include "ui/SensorEditor.h"
 #include "ui/SourceEditor.h"
-#include "visualization/Renderer.h"
-
 #include <QHeaderView>
 #include <QApplication>
 #include <QFileDialog>
@@ -36,8 +34,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     // Core
     m_scene = std::make_shared<Scene>();
     m_engine = std::make_unique<MonteCarloEngine>(m_scene);
-    m_renderer = std::make_unique<Renderer>();
-
     // UI
     setupUI();
     connectSignals();
@@ -85,11 +81,14 @@ void MainWindow::setupCentralWidget() {
 
     // Viewport (OpenGL si dispo, sinon QWidget fallback avec message)
 #ifdef HAS_QOPENGLWIDGET
-    // Viewport (QOpenGLWindow + container)
-    auto *win3d = new View3D();
-    win3d->setScene(m_scene);
-    m_viewport = QWidget::createWindowContainer(win3d, this);
-    m_viewport->setMinimumSize(600, 400);
+    m_view3D = new View3D();
+    m_view3D->setScene(m_scene);
+    m_view3D->setWireframeEnabled(false);
+    m_view3D->setShowSensors(true);
+    m_view3D->setShowSources(true);
+    m_viewport = QWidget::createWindowContainer(m_view3D, this);
+#else
+    m_view3D = nullptr;
     m_viewport = new QWidget(this);
     auto *msg = new QLabel("OpenGL non disponible — affichage simplifié", m_viewport);
     msg->setAlignment(Qt::AlignCenter);
@@ -110,17 +109,6 @@ void MainWindow::setupCentralWidget() {
     mainSplitter->setStretchFactor(0, 1);
     mainSplitter->setStretchFactor(1, 0);
 
-    // Brancher renderer prudemment
-    if (m_renderer) {
-        m_renderer->attachScene(m_scene);
-#ifdef HAS_QOPENGLWIDGET
-        m_renderer->setViewport(m_viewport);
-#else
-        m_renderer->setViewport(nullptr); // no-op dans le stub
-#endif
-        m_renderer->resize(m_viewport->width(), m_viewport->height());
-        m_renderer->renderOnce();
-    }
 }
 
 void MainWindow::setupSimulationPanel() {
@@ -255,14 +243,15 @@ void MainWindow::setupMenus() {
     QMenu *viewMenu = mb->addMenu("&Vue");
     viewMenu->addAction("Reset &caméra", this, &MainWindow::resetCamera)->setShortcut(Qt::Key_Home);
     viewMenu->addSeparator();
-    auto *wireframeAction = viewMenu->addAction("Mode &filaire", this, &MainWindow::toggleWireframe);
-    wireframeAction->setCheckable(true);
-    auto *sensorsAction = viewMenu->addAction("Afficher &capteurs", this, &MainWindow::toggleSensors);
-    sensorsAction->setCheckable(true);
-    sensorsAction->setChecked(true);
-    auto *sourcesAction = viewMenu->addAction("Afficher &sources", this, &MainWindow::toggleSources);
-    sourcesAction->setCheckable(true);
-    sourcesAction->setChecked(true);
+    m_wireframeAction = viewMenu->addAction("Mode &filaire", this, &MainWindow::toggleWireframe);
+    m_wireframeAction->setCheckable(true);
+    m_wireframeAction->setChecked(false);
+    m_showSensorsAction = viewMenu->addAction("Afficher &capteurs", this, &MainWindow::toggleSensors);
+    m_showSensorsAction->setCheckable(true);
+    m_showSensorsAction->setChecked(true);
+    m_showSourcesAction = viewMenu->addAction("Afficher &sources", this, &MainWindow::toggleSources);
+    m_showSourcesAction->setCheckable(true);
+    m_showSourcesAction->setChecked(true);
 
     // Aide
     QMenu *helpMenu = mb->addMenu("&Aide");
@@ -471,10 +460,40 @@ void MainWindow::exportResults() {
 }
 
 // Vue
-void MainWindow::resetCamera() { /* TODO */ }
-void MainWindow::toggleWireframe() { /* TODO */ }
-void MainWindow::toggleSensors() { /* TODO */ }
-void MainWindow::toggleSources() { /* TODO */ }
+void MainWindow::resetCamera() {
+#ifdef HAS_QOPENGLWIDGET
+    if (m_view3D) {
+        m_view3D->resetCamera();
+        return;
+    }
+#endif
+}
+
+void MainWindow::toggleWireframe() {
+#ifdef HAS_QOPENGLWIDGET
+    bool enabled = m_wireframeAction && m_wireframeAction->isChecked();
+    if (m_view3D)
+        m_view3D->setWireframeEnabled(enabled);
+    else if (m_wireframeAction)
+        m_wireframeAction->setChecked(false);
+#endif
+}
+
+void MainWindow::toggleSensors() {
+#ifdef HAS_QOPENGLWIDGET
+    bool enabled = m_showSensorsAction ? m_showSensorsAction->isChecked() : true;
+    if (m_view3D)
+        m_view3D->setShowSensors(enabled);
+#endif
+}
+
+void MainWindow::toggleSources() {
+#ifdef HAS_QOPENGLWIDGET
+    bool enabled = m_showSourcesAction ? m_showSourcesAction->isChecked() : true;
+    if (m_view3D)
+        m_view3D->setShowSources(enabled);
+#endif
+}
 
 void MainWindow::showAbout() {
     QMessageBox::about(this, "À propos",

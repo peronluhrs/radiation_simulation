@@ -26,11 +26,11 @@
 #include <QRadioButton>
 #include <QTabWidget>
 #include <QTimer>
+#include <QAction>
 
 #include "common.h"
 #include "core/Scene.h"
 #include "simulation/MonteCarloEngine.h"
-#include "visualization/Renderer.h"
 
 // On n’inclut plus QOpenGLWidget ici : le viewport est un QWidget container
 // pour un QOpenGLWindow (View3D). Ça évite les conversions invalides.
@@ -41,6 +41,7 @@ class GeometryEditor;
 class MaterialEditor;
 class SensorEditor;
 class SourceEditor;
+class View3D;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -96,8 +97,7 @@ class MainWindow : public QMainWindow {
 
     // UI / rendu : container QWidget pour le QOpenGLWindow (View3D)
     QWidget *m_viewport = nullptr;
-    // Renderer OpenGL
-    std::unique_ptr<Renderer> m_renderer;
+    View3D *m_view3D = nullptr;
 
     // Editors
     GeometryEditor *m_geometryEditor = nullptr;
@@ -139,6 +139,10 @@ class MainWindow : public QMainWindow {
 
     // Timers
     QTimer *m_updateTimer = nullptr;
+    QAction *m_wireframeAction = nullptr;
+    QAction *m_showSensorsAction = nullptr;
+    QAction *m_showSourcesAction = nullptr;
+
     QTimer *m_statusTimer = nullptr;
 
     // State
