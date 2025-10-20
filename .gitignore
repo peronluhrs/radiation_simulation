@@ -1,0 +1,17 @@
+build/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+*.a
+*.so
+*.dll
+*.exe
+*.o
+*.obj
+*.user
+*.pro.user
+*.qmake.stash
+*.swp
+*.DS_Store
+.vscode/
+.idea/

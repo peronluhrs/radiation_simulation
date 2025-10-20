@@ -1,0 +1,22 @@
+#pragma once
+
+// Configuration automatique générée par CMake
+
+#define PROJECT_NAME "@PROJECT_NAME@"
+#define PROJECT_VERSION "@PROJECT_VERSION@"
+
+// Options de compilation
+#cmakedefine ENABLE_GUI
+#cmakedefine USE_OPENMP
+#cmakedefine CONSOLE_VERSION
+
+// Informations système
+#define CMAKE_CXX_COMPILER "@CMAKE_CXX_COMPILER_ID@"
+#define CMAKE_BUILD_TYPE "@CMAKE_BUILD_TYPE@"
+
+// Chemins d'installation
+#define INSTALL_PREFIX "@CMAKE_INSTALL_PREFIX@"
+
+// Date de compilation
+#define BUILD_DATE __DATE__
+#define BUILD_TIME __TIME__

@@ -1,0 +1,58 @@
+SIMULATEUR D'ATTÉNUATION DE RADIATION
+=====================================
+Version 1.0.0 - Démonstration Console
+
+INSTALLATION RAPIDE:
+===================
+
+1. Extraction:
+   tar -xzf radiation_simulator_demo.tar.gz
+   cd radiation_simulation
+
+2. Compilation:
+   ./compile_demo.sh
+
+3. Exécution:
+   ./RadiationSimConsole
+
+PRÉREQUIS:
+=========
+- Compilateur C++20 (GCC 10+, Clang 12+)
+- OpenMP (optionnel, pour parallélisation)
+- CMake 3.16+ (pour build complet)
+
+FONCTIONNALITÉS DÉMONTRÉES:
+==========================
+✓ Simulation Monte Carlo 500k+ particules/s
+✓ Bibliothèque de 8 matériaux physiques
+✓ Géométrie 3D avec accélération BVH
+✓ Sources gamma/neutron/muon configurables
+✓ Capteurs virtuels multi-types
+✓ Validation analytique automatique
+✓ Architecture modulaire extensible
+
+RÉSULTATS TYPIQUES:
+==================
+- Atténuation Plomb 5cm: 97.7%
+- Atténuation Béton 30cm: 21.7%  
+- Atténuation combinée: 98.2%
+- Performance: 497k particules/s
+- Temps simulation: ~100ms
+
+FICHIERS PRINCIPAUX:
+===================
+RadiationSimConsole - Exécutable principal
+README.md           - Documentation complète
+DEMO.md            - Guide de démonstration
+compile_demo.sh    - Script compilation simple
+include/           - Headers API (18 fichiers)
+src/              - Sources C++ (11 fichiers)
+examples/         - Cas d'usage détaillés
+
+SUPPORT:
+========
+Architecture: x86_64, ARM64
+OS: Linux, macOS, Windows (avec MinGW)
+Standards: C++20, OpenMP, CMake
+
+Pour questions techniques, voir README.md

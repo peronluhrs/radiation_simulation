@@ -1,0 +1,164 @@
+cmake_minimum_required(VERSION 3.16)
+project(RadiationAttenuationSimulator VERSION 1.0.0 LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Option pour activer/désactiver l'interface graphique Qt
+option(ENABLE_GUI "Enable Qt GUI interface" OFF)
+
+# Recherche des packages requis
+find_package(OpenMP)
+# Qt: OpenGLWidgets optionnel
+find_package(Qt6 6.2 REQUIRED COMPONENTS Widgets Gui)
+find_package(Qt6 OPTIONAL_COMPONENTS OpenGLWidgets)
+
+# Si Qt est demandé, essayer de le trouver
+if(ENABLE_GUI)
+    find_package(Qt6 6.2 REQUIRED COMPONENTS Widgets Gui)
+find_package(Qt6 OPTIONAL_COMPONENTS OpenGLWidgets)
+find_package(Qt6 OPTIONAL_COMPONENTS OpenGLWidgets)
+    if(Qt6_FOUND)
+        message(STATUS "Qt6 trouvé - Interface graphique activée")
+        set(GUI_AVAILABLE ON)
+    else()
+        message(WARNING "Qt6 non trouvé - Interface graphique désactivée")
+        set(GUI_AVAILABLE OFF)
+    endif()
+else()
+    set(GUI_AVAILABLE OFF)
+    message(STATUS "Interface graphique désactivée (ENABLE_GUI=OFF)")
+endif()
+
+# Répertoires d'inclusion
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+# Fichiers sources communs (core du simulateur)
+set(CORE_SOURCES
+    src/core/Material.cpp
+    src/geometry/Object3D.cpp
+    src/geometry/Box.cpp
+    src/simulation/MonteCarloEngine.cpp
+    src/utils/BVH.cpp
+)
+
+# Implémentation des fonctions utilitaires communes
+set(UTILITY_SOURCES
+    src/utils/Math.cpp
+)
+
+# Créer la bibliothèque utilitaire
+add_library(RadiationCore STATIC ${CORE_SOURCES})
+
+# Configuration du compilateur
+target_compile_features(RadiationCore PUBLIC cxx_std_20)
+
+# Optimisations
+if(MSVC)
+    target_compile_options(RadiationCore PRIVATE /O2 /fp:fast /W3)
+else()
+    target_compile_options(RadiationCore PRIVATE -O3 -march=native -ffast-math -Wall -Wextra)
+endif()
+
+# Support OpenMP si disponible
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(RadiationCore OpenMP::OpenMP_CXX)
+    target_compile_definitions(RadiationCore PRIVATE USE_OPENMP)
+    message(STATUS "OpenMP activé pour la parallélisation")
+endif()
+
+# Version console (toujours compilée)
+add_executable(RadiationSimConsole src/demo_console.cpp)
+target_link_libraries(RadiationSimConsole RadiationCore)
+
+target_link_libraries(RadiationSimGUI PRIVATE Qt6::Widgets Qt6::Gui)
+if (TARGET Qt6::OpenGLWidgets)
+  target_link_libraries(RadiationSimGUI PRIVATE Qt6::OpenGLWidgets)
+  target_compile_definitions(RadiationSimGUI PRIVATE HAS_QOPENGLWIDGET=1)
+endif()
+
+file(GLOB CORE_SRC
+    src/core/*.cpp
+    src/geometry/*.cpp
+    src/simulation/*.cpp
+    src/utils/*.cpp)   # <- cette ligne est importante
+
+# Configuration spécifique pour les générateurs aléatoires
+target_compile_definitions(RadiationSimConsole PRIVATE CONSOLE_VERSION)
+
+# Version graphique Qt (conditionnelle)
+if(GUI_AVAILABLE)
+    set(GUI_SOURCES
+        src/main.cpp
+        src/ui/MainWindow.cpp
+        # Autres fichiers UI à ajouter
+    )
+    
+    add_executable(RadiationSimGUI ${GUI_SOURCES})
+    
+    target_link_libraries(RadiationSimGUI 
+        RadiationCore
+        Qt6::Core
+        Qt6::Widgets Qt6::OpenGL Qt6::OpenGLWidgets
+        Qt6::OpenGL
+    )
+    
+    # Configuration Qt
+    set_target_properties(RadiationSimGUI PROPERTIES
+        AUTOMOC ON
+        AUTORCC ON
+        AUTOUIC ON
+    )
+    
+    message(STATUS "Exécutable GUI configuré: RadiationSimGUI")
+endif()
+
+# Alias pour compatibilité
+add_custom_target(RadiationAttenuationSimulator 
+                  DEPENDS RadiationSimConsole)
+
+# Installation
+install(TARGETS RadiationSimConsole
+        RUNTIME DESTINATION bin)
+
+if(GUI_AVAILABLE)
+    install(TARGETS RadiationSimGUI
+            RUNTIME DESTINATION bin)
+endif()
+
+# Documentation et exemples
+install(FILES README.md
+        DESTINATION share/doc/radiation-simulator)
+
+install(DIRECTORY examples/
+        DESTINATION share/doc/radiation-simulator/examples
+        FILES_MATCHING PATTERN "*.cpp")
+
+# Tests simples
+enable_testing()
+
+# Test de fonctionnement de base
+add_test(NAME basic_functionality 
+         COMMAND RadiationSimConsole --version)
+
+# Affichage des informations de configuration
+message(STATUS "Configuration du projet:")
+message(STATUS "  - Version: ${PROJECT_VERSION}")
+message(STATUS "  - Standard C++: ${CMAKE_CXX_STANDARD}")
+message(STATUS "  - Type de build: ${CMAKE_BUILD_TYPE}")
+message(STATUS "  - Interface graphique: ${GUI_AVAILABLE}")
+message(STATUS "  - OpenMP: ${OpenMP_CXX_FOUND}")
+message(STATUS "  - Compilateur: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
+
+# Génération d'un fichier de configuration
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/config.h.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/config.h"
+)
+target_include_directories(RadiationCore PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+
+
+# Lier OpenGLWidgets seulement si disponible
+if (TARGET Qt6::OpenGLWidgets)
+  target_link_libraries(RadiationSimGUI PRIVATE Qt6::Widgets Qt6::Gui Qt6::OpenGLWidgets)
+endif()
