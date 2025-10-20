@@ -1,3 +1,4 @@
+#include "visualization/View3D.h"
 #include "ui/MainWindow.h"
 #include "ui/GeometryEditor.h"
 #include "ui/MaterialEditor.h"
@@ -31,9 +32,7 @@
 #include <QMenuBar>
 #include <QToolBar>
 
-MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
-{
+MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     // Core
     m_scene = std::make_shared<Scene>();
     m_engine = std::make_unique<MonteCarloEngine>(m_scene);
@@ -55,16 +54,13 @@ MainWindow::MainWindow(QWidget *parent)
     Log::info("Interface principale initialisée");
 }
 
-MainWindow::~MainWindow()
-{
-    if (m_engine && m_engine->isRunning())
-    {
+MainWindow::~MainWindow() {
+    if (m_engine && m_engine->isRunning()) {
         m_engine->stopSimulation();
     }
 }
 
-void MainWindow::setupUI()
-{
+void MainWindow::setupUI() {
     setupCentralWidget();
     setupMenus();
     setupToolbars();
@@ -82,16 +78,18 @@ void MainWindow::setupUI()
     m_statusTimer->start();
 }
 
-void MainWindow::setupCentralWidget()
-{
+void MainWindow::setupCentralWidget() {
     // Splitter horizontal : [viewport] | [panneau simulation]
     auto *mainSplitter = new QSplitter(Qt::Horizontal, this);
     setCentralWidget(mainSplitter);
 
     // Viewport (OpenGL si dispo, sinon QWidget fallback avec message)
 #ifdef HAS_QOPENGLWIDGET
-    m_viewport = new QOpenGLWidget(this);
-#else
+    // Viewport (QOpenGLWindow + container)
+    auto *win3d = new View3D();
+    win3d->setScene(m_scene);
+    m_viewport = QWidget::createWindowContainer(win3d, this);
+    m_viewport->setMinimumSize(600, 400);
     m_viewport = new QWidget(this);
     auto *msg = new QLabel("OpenGL non disponible — affichage simplifié", m_viewport);
     msg->setAlignment(Qt::AlignCenter);
@@ -113,8 +111,7 @@ void MainWindow::setupCentralWidget()
     mainSplitter->setStretchFactor(1, 0);
 
     // Brancher renderer prudemment
-    if (m_renderer)
-    {
+    if (m_renderer) {
         m_renderer->attachScene(m_scene);
 #ifdef HAS_QOPENGLWIDGET
         m_renderer->setViewport(m_viewport);
@@ -126,8 +123,7 @@ void MainWindow::setupCentralWidget()
     }
 }
 
-void MainWindow::setupSimulationPanel()
-{
+void MainWindow::setupSimulationPanel() {
     auto *layout = new QVBoxLayout(m_simulationPanel);
 
     // Contrôles de simulation
@@ -203,8 +199,7 @@ void MainWindow::setupSimulationPanel()
     layout->addStretch();
 }
 
-void MainWindow::setupResultsPanel()
-{
+void MainWindow::setupResultsPanel() {
     auto *layout = new QVBoxLayout(m_resultsPanel);
 
     auto *resultsGroup = new QGroupBox("Résultats Rapides", this);
@@ -220,8 +215,7 @@ void MainWindow::setupResultsPanel()
     layout->addWidget(resultsGroup);
 }
 
-void MainWindow::setupMenus()
-{
+void MainWindow::setupMenus() {
     QMenuBar *mb = menuBar();
 
     // Fichier
@@ -275,8 +269,7 @@ void MainWindow::setupMenus()
     helpMenu->addAction("À &propos...", this, &MainWindow::showAbout);
 }
 
-void MainWindow::setupToolbars()
-{
+void MainWindow::setupToolbars() {
     QToolBar *tb = addToolBar("Principal");
     tb->addAction(style()->standardIcon(QStyle::SP_FileIcon), "Nouveau", this, &MainWindow::newProject);
     tb->addAction(style()->standardIcon(QStyle::SP_DirOpenIcon), "Ouvrir", this, &MainWindow::openProject);
@@ -289,8 +282,7 @@ void MainWindow::setupToolbars()
     tb->addAction("Reset caméra", this, &MainWindow::resetCamera);
 }
 
-void MainWindow::setupStatusBar()
-{
+void MainWindow::setupStatusBar() {
     QStatusBar *status = statusBar();
     m_statusLabel = new QLabel("Prêt", this);
     status->addWidget(m_statusLabel);
@@ -298,8 +290,7 @@ void MainWindow::setupStatusBar()
     status->addPermanentWidget(new QLabel("Temps: 0s", this));
 }
 
-void MainWindow::setupDockWidgets()
-{
+void MainWindow::setupDockWidgets() {
     // Géométrie
     m_geometryDock = new QDockWidget("Géométrie", this);
     m_geometryEditor = new GeometryEditor(m_scene, this);
@@ -350,8 +341,7 @@ void MainWindow::setupDockWidgets()
     m_resultsDock->raise();
 }
 
-void MainWindow::connectSignals()
-{
+void MainWindow::connectSignals() {
     // Boutons
     connect(m_startButton, &QPushButton::clicked, this, &MainWindow::startSimulation);
     connect(m_pauseButton, &QPushButton::clicked, this, &MainWindow::pauseSimulation);
@@ -359,33 +349,27 @@ void MainWindow::connectSignals()
     connect(m_resetButton, &QPushButton::clicked, this, &MainWindow::resetSimulation);
 
     // Config
-    connect(m_particleCountSpin, QOverload<int>::of(&QSpinBox::valueChanged),
-            [this](int value)
-            {
-                auto cfg = m_engine->getConfig();
-                cfg.maxParticles = value;
-                m_engine->setConfig(cfg);
-                setProjectModified();
-            });
+    connect(m_particleCountSpin, QOverload<int>::of(&QSpinBox::valueChanged), [this](int value) {
+        auto cfg = m_engine->getConfig();
+        cfg.maxParticles = value;
+        m_engine->setConfig(cfg);
+        setProjectModified();
+    });
 
-    connect(m_threadCountSpin, QOverload<int>::of(&QSpinBox::valueChanged),
-            [this](int value)
-            {
-                auto cfg = m_engine->getConfig();
-                cfg.numThreads = value;
-                m_engine->setConfig(cfg);
-                setProjectModified();
-            });
+    connect(m_threadCountSpin, QOverload<int>::of(&QSpinBox::valueChanged), [this](int value) {
+        auto cfg = m_engine->getConfig();
+        cfg.numThreads = value;
+        m_engine->setConfig(cfg);
+        setProjectModified();
+    });
 }
 
 // Simulation
-void MainWindow::startSimulation()
-{
+void MainWindow::startSimulation() {
     if (!m_engine)
         return;
 
-    try
-    {
+    try {
         auto cfg = m_engine->getConfig();
         cfg.maxParticles = m_particleCountSpin->value();
         cfg.numThreads = m_threadCountSpin->value();
@@ -398,27 +382,20 @@ void MainWindow::startSimulation()
         m_updateTimer->start();
         updateSimulationControls();
         Log::info("Simulation démarrée");
-    }
-    catch (const std::exception &e)
-    {
-        QMessageBox::critical(this, "Erreur",
-                              QString("Impossible de démarrer la simulation:\n%1").arg(e.what()));
+    } catch (const std::exception &e) {
+        QMessageBox::critical(this, "Erreur", QString("Impossible de démarrer la simulation:\n%1").arg(e.what()));
     }
 }
 
-void MainWindow::pauseSimulation()
-{
-    if (m_engine)
-    {
+void MainWindow::pauseSimulation() {
+    if (m_engine) {
         m_engine->pauseSimulation();
         updateSimulationControls();
     }
 }
 
-void MainWindow::stopSimulation()
-{
-    if (m_engine)
-    {
+void MainWindow::stopSimulation() {
+    if (m_engine) {
         m_engine->stopSimulation();
         m_updateTimer->stop();
         updateSimulationControls();
@@ -426,8 +403,7 @@ void MainWindow::stopSimulation()
     }
 }
 
-void MainWindow::resetSimulation()
-{
+void MainWindow::resetSimulation() {
     stopSimulation();
     m_engine->resetStats();
     m_progressBar->setValue(0);
@@ -436,8 +412,7 @@ void MainWindow::resetSimulation()
 }
 
 // Fichier
-void MainWindow::newProject()
-{
+void MainWindow::newProject() {
     if (!saveChanges())
         return;
 
@@ -448,66 +423,48 @@ void MainWindow::newProject()
     Log::info("Nouveau projet créé");
 }
 
-void MainWindow::openProject()
-{
+void MainWindow::openProject() {
     if (!saveChanges())
         return;
 
     QString filename = QFileDialog::getOpenFileName(this, "Ouvrir un projet", "", "Projets (*.radsim)");
-    if (!filename.isEmpty())
-    {
-        try
-        {
+    if (!filename.isEmpty()) {
+        try {
             m_scene->loadFromFile(filename.toStdString());
             m_currentProjectFile = filename;
             setProjectModified(false);
             Log::info("Projet ouvert: " + filename.toStdString());
-        }
-        catch (const std::exception &e)
-        {
-            QMessageBox::critical(this, "Erreur",
-                                  QString("Impossible d'ouvrir le projet:\n%1").arg(e.what()));
+        } catch (const std::exception &e) {
+            QMessageBox::critical(this, "Erreur", QString("Impossible d'ouvrir le projet:\n%1").arg(e.what()));
         }
     }
 }
 
-void MainWindow::saveProject()
-{
-    if (m_currentProjectFile.isEmpty())
-    {
+void MainWindow::saveProject() {
+    if (m_currentProjectFile.isEmpty()) {
         saveProjectAs();
-    }
-    else
-    {
-        try
-        {
+    } else {
+        try {
             m_scene->saveToFile(m_currentProjectFile.toStdString());
             setProjectModified(false);
             Log::info("Projet sauvegardé");
-        }
-        catch (const std::exception &e)
-        {
-            QMessageBox::critical(this, "Erreur",
-                                  QString("Impossible de sauvegarder:\n%1").arg(e.what()));
+        } catch (const std::exception &e) {
+            QMessageBox::critical(this, "Erreur", QString("Impossible de sauvegarder:\n%1").arg(e.what()));
         }
     }
 }
 
-void MainWindow::saveProjectAs()
-{
+void MainWindow::saveProjectAs() {
     QString filename = QFileDialog::getSaveFileName(this, "Sauvegarder le projet", "", "Projets (*.radsim)");
-    if (!filename.isEmpty())
-    {
+    if (!filename.isEmpty()) {
         m_currentProjectFile = filename;
         saveProject();
     }
 }
 
-void MainWindow::exportResults()
-{
+void MainWindow::exportResults() {
     QString filename = QFileDialog::getSaveFileName(this, "Exporter les résultats", "", "CSV (*.csv);;JSON (*.json)");
-    if (!filename.isEmpty())
-    {
+    if (!filename.isEmpty()) {
         // TODO: export réel
         Log::info("Résultats exportés vers: " + filename.toStdString());
     }
@@ -519,8 +476,7 @@ void MainWindow::toggleWireframe() { /* TODO */ }
 void MainWindow::toggleSensors() { /* TODO */ }
 void MainWindow::toggleSources() { /* TODO */ }
 
-void MainWindow::showAbout()
-{
+void MainWindow::showAbout() {
     QMessageBox::about(this, "À propos",
                        "Simulateur d'Atténuation de Radiation v1.0\n\n"
                        "Simulation Monte Carlo d'atténuation de radiation\n"
@@ -530,8 +486,7 @@ void MainWindow::showAbout()
 }
 
 // Updates
-void MainWindow::updateSimulation()
-{
+void MainWindow::updateSimulation() {
     if (!m_engine)
         return;
 
@@ -541,16 +496,14 @@ void MainWindow::updateSimulation()
     const auto &stats = m_engine->getStats();
     m_statusLabel->setText(QString("Particules: %1").arg(stats.particlesTransported.load()));
 
-    if (!m_engine->isRunning() && progress >= 1.0f)
-    {
+    if (!m_engine->isRunning() && progress >= 1.0f) {
         m_updateTimer->stop();
         updateSimulationControls();
         Log::info("Simulation terminée");
     }
 }
 
-void MainWindow::updateStatusBar()
-{
+void MainWindow::updateStatusBar() {
     if (!m_engine)
         return;
 
@@ -558,20 +511,16 @@ void MainWindow::updateStatusBar()
     double elapsed = stats.getElapsedTime();
     double rate = stats.getParticleRate();
 
-    statusBar()->showMessage(QString("Temps: %1s | Taux: %2 part/s")
-                                 .arg(elapsed, 0, 'f', 1)
-                                 .arg(rate, 0, 'f', 0));
+    statusBar()->showMessage(QString("Temps: %1s | Taux: %2 part/s").arg(elapsed, 0, 'f', 1).arg(rate, 0, 'f', 0));
 }
 
-void MainWindow::updateResults()
-{
+void MainWindow::updateResults() {
     if (!m_scene)
         return;
 
     m_resultsTable->setRowCount(0);
     auto sensors = m_scene->getAllSensors();
-    for (auto &sensor : sensors)
-    {
+    for (auto &sensor : sensors) {
         int row = m_resultsTable->rowCount();
         m_resultsTable->insertRow(row);
         m_resultsTable->setItem(row, 0, new QTableWidgetItem(QString::fromStdString(sensor->getName())));
@@ -579,8 +528,7 @@ void MainWindow::updateResults()
     }
 }
 
-void MainWindow::updateSimulationControls()
-{
+void MainWindow::updateSimulationControls() {
     if (!m_engine)
         return;
 
@@ -597,70 +545,54 @@ void MainWindow::updateSimulationControls()
     m_energyCutoffSpin->setEnabled(!running);
 }
 
-void MainWindow::setProjectModified(bool modified)
-{
+void MainWindow::setProjectModified(bool modified) {
     m_projectModified = modified;
     updateWindowTitle();
 }
 
-void MainWindow::updateWindowTitle()
-{
+void MainWindow::updateWindowTitle() {
     QString title = "Simulateur d'Atténuation de Radiation";
 
-    if (!m_currentProjectFile.isEmpty())
-    {
+    if (!m_currentProjectFile.isEmpty()) {
         QFileInfo info(m_currentProjectFile);
         title += " - " + info.baseName();
-    }
-    else
-    {
+    } else {
         title += " - Nouveau projet";
     }
 
-    if (m_projectModified)
-    {
+    if (m_projectModified) {
         title += " *";
     }
     setWindowTitle(title);
 }
 
-bool MainWindow::saveChanges()
-{
+bool MainWindow::saveChanges() {
     if (!m_projectModified)
         return true;
 
-    auto ret = QMessageBox::question(this,
-                                     "Sauvegarder les modifications",
+    auto ret = QMessageBox::question(this, "Sauvegarder les modifications",
                                      "Le projet a été modifié. Voulez-vous sauvegarder les modifications?",
                                      QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
-    if (ret == QMessageBox::Save)
-    {
+    if (ret == QMessageBox::Save) {
         saveProject();
         return !m_projectModified;
-    }
-    else if (ret == QMessageBox::Cancel)
-    {
+    } else if (ret == QMessageBox::Cancel) {
         return false;
     }
     return true;
 }
 
-void MainWindow::closeEvent(QCloseEvent *event)
-{
-    if (saveChanges())
-    {
+void MainWindow::closeEvent(QCloseEvent *event) {
+    if (saveChanges()) {
         QSettings settings;
         settings.setValue("geometry", saveGeometry());
         settings.setValue("windowState", saveState());
 
-        if (m_engine && m_engine->isRunning())
-        {
+        if (m_engine && m_engine->isRunning()) {
             m_engine->stopSimulation();
         }
         event->accept();
-    }
-    else
-    {
+    } else {
         event->ignore();
     }
 }
