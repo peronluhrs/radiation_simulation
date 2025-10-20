@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QWidget>
 #include <QMainWindow>
 #include <QMenuBar>
 #include <QToolBar>
@@ -25,37 +26,32 @@
 #include <QRadioButton>
 #include <QTabWidget>
 #include <QTimer>
-#include <QWidget>      // fallback viewport type
-
-// OpenGL widget optionnel
-#if __has_include(<QOpenGLWidget>)
-  #include <QOpenGLWidget>
-  #define HAS_QOPENGLWIDGET 1
-#endif
 
 #include "common.h"
 #include "core/Scene.h"
 #include "simulation/MonteCarloEngine.h"
 #include "visualization/Renderer.h"
 
-// Forward declarations des éditeurs
+// On n’inclut plus QOpenGLWidget ici : le viewport est un QWidget container
+// pour un QOpenGLWindow (View3D). Ça évite les conversions invalides.
+// #include <QOpenGLWidget>  // <- NE PAS inclure
+
+// forward declares des éditeurs (headers dans include/ui/*.h)
 class GeometryEditor;
 class MaterialEditor;
 class SensorEditor;
 class SourceEditor;
 
-class MainWindow : public QMainWindow
-{
+class MainWindow : public QMainWindow {
     Q_OBJECT
-
-public:
+  public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow() override;
 
-protected:
+  protected:
     void closeEvent(QCloseEvent *event) override;
 
-private slots:
+  private slots:
     // Menu actions
     void newProject();
     void openProject();
@@ -81,77 +77,73 @@ private slots:
     void updateStatusBar();
     void updateResults();
 
-private:
-    // Construction UI
+  private:
+    void setupSimulationPanel();
+    void setupResultsPanel();
     void setupUI();
     void setupMenus();
     void setupToolbars();
     void setupStatusBar();
     void setupDockWidgets();
     void setupCentralWidget();
-    void setupSimulationPanel();
-    void setupResultsPanel();
 
     void connectSignals();
     void updateSimulationControls();
 
-    // Core
+    // Core components
     std::shared_ptr<Scene> m_scene;
     std::unique_ptr<MonteCarloEngine> m_engine;
+
+    // UI / rendu : container QWidget pour le QOpenGLWindow (View3D)
+    QWidget *m_viewport = nullptr;
+    // Renderer OpenGL
     std::unique_ptr<Renderer> m_renderer;
 
-    // Viewport : OpenGL si dispo, sinon QWidget
-#ifdef HAS_QOPENGLWIDGET
-    QOpenGLWidget *m_viewport {nullptr};
-#else
-    QWidget       *m_viewport {nullptr};
-#endif
-
     // Editors
-    GeometryEditor *m_geometryEditor {nullptr};
-    MaterialEditor *m_materialEditor {nullptr};
-    SensorEditor   *m_sensorEditor   {nullptr};
-    SourceEditor   *m_sourceEditor   {nullptr};
+    GeometryEditor *m_geometryEditor = nullptr;
+    MaterialEditor *m_materialEditor = nullptr;
+    SensorEditor *m_sensorEditor = nullptr;
+    SourceEditor *m_sourceEditor = nullptr;
 
     // Dock widgets
-    QDockWidget *m_geometryDock {nullptr};
-    QDockWidget *m_materialDock {nullptr};
-    QDockWidget *m_sensorDock   {nullptr};
-    QDockWidget *m_sourceDock   {nullptr};
-    QDockWidget *m_resultsDock  {nullptr};
-    QDockWidget *m_logDock      {nullptr};
+    QDockWidget *m_geometryDock = nullptr;
+    QDockWidget *m_materialDock = nullptr;
+    QDockWidget *m_sensorDock = nullptr;
+    QDockWidget *m_sourceDock = nullptr;
+    QDockWidget *m_resultsDock = nullptr;
+    QDockWidget *m_logDock = nullptr;
 
     // Control panels
-    QWidget   *m_simulationPanel {nullptr};
-    QWidget   *m_resultsPanel    {nullptr};
-    QTextEdit *m_logText         {nullptr};
+    QWidget *m_simulationPanel = nullptr;
+    QWidget *m_resultsPanel = nullptr;
+    QTextEdit *m_logText = nullptr;
 
     // Simulation controls
-    QPushButton   *m_startButton  {nullptr};
-    QPushButton   *m_pauseButton  {nullptr};
-    QPushButton   *m_stopButton   {nullptr};
-    QPushButton   *m_resetButton  {nullptr};
-    QProgressBar  *m_progressBar  {nullptr};
-    QLabel        *m_statusLabel  {nullptr};
+    QPushButton *m_startButton = nullptr;
+    QPushButton *m_pauseButton = nullptr;
+    QPushButton *m_stopButton = nullptr;
+    QPushButton *m_resetButton = nullptr;
+    QProgressBar *m_progressBar = nullptr;
+    QLabel *m_statusLabel = nullptr;
 
     // Configuration
-    QSpinBox        *m_particleCountSpin        {nullptr};
-    QSpinBox        *m_threadCountSpin          {nullptr};
-    QDoubleSpinBox  *m_energyCutoffSpin         {nullptr};
-    QCheckBox       *m_backgroundSubtractionCheck {nullptr};
-    QCheckBox       *m_varianceReductionCheck     {nullptr};
+    QSpinBox *m_particleCountSpin = nullptr;
+    QSpinBox *m_threadCountSpin = nullptr;
+    QDoubleSpinBox *m_energyCutoffSpin = nullptr;
+    QCheckBox *m_backgroundSubtractionCheck = nullptr;
+    QCheckBox *m_varianceReductionCheck = nullptr;
 
     // Results display
-    QTableWidget *m_resultsTable {nullptr};
-    QTreeWidget  *m_sensorTree   {nullptr};
+    QTableWidget *m_resultsTable = nullptr;
+    QTreeWidget *m_sensorTree = nullptr;
 
     // Timers
-    QTimer *m_updateTimer {nullptr};
-    QTimer *m_statusTimer {nullptr};
+    QTimer *m_updateTimer = nullptr;
+    QTimer *m_statusTimer = nullptr;
 
     // State
     QString m_currentProjectFile;
-    bool    m_projectModified = false;
+    bool m_projectModified = false;
 
     void setProjectModified(bool modified = true);
     void updateWindowTitle();

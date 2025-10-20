@@ -1,6 +1,7 @@
 #include "ui/GeometryEditor.h"
-#include "core/Scene.h"
-
-GeometryEditor::GeometryEditor(QWidget* parent) : QWidget(parent) {}
-GeometryEditor::GeometryEditor(std::shared_ptr<Scene> scene, QWidget* parent)
-    : QWidget(parent), m_scene(std::move(scene)) {}
+#include <QVBoxLayout>
+#include <QLabel>
+GeometryEditor::GeometryEditor(std::shared_ptr<Scene>, QWidget *parent) : QWidget(parent) {
+    auto *lay = new QVBoxLayout(this);
+    lay->addWidget(new QLabel("Éditeur Géométrie (stub)"));
+}

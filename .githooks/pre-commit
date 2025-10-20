@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -e
+files=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(h|hpp|cpp|cc)$' || true)
+[ -z "$files" ] && exit 0
+for f in $files; do
+  clang-format -i "$f" || true
+  git add "$f"
+done
