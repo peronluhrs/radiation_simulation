@@ -1,42 +1,59 @@
-# Task 001 — Stabiliser et structurer le viewport 3D
+# Task: Stabiliser le viewport et rendre le Renderer compatible GLES (grid + axes)
+
+## Contexte
+Nous avons un GUI Qt6 qui se lance, un `View3D` basé sur `QOpenGLWindow` et un `Renderer` minimal.
+Objectifs d'après les docs:
+- Vue 3D temps réel robuste, indépendante du moteur (archi MVC).  
+- Rendu de base: grille, axes, helpers de scène (prépare T2).  
+(Refs: Software Design Document §§1–3; Definition §§2.7, 2.1)  
 
 ## Objectif
-Rendre le viewport stable, avec un rendu minimal propre (axes, grille, caméra orbit) et brancher un pipeline de dessin scène/sources/capteurs non-bloquant.
+1) Assurer un rendu stable **sans** `glPolygonMode` ni VAO (compat GLES via `QOpenGLFunctions` uniquement).  
+2) Implémenter **drawGrid(size, step, minorAlpha)** et **drawAxes(length)** en GL_LINES.  
+3) Exposer API côté `Renderer` déjà appelée par `View3D` (initialize/resizer/beginFrame/endFrame/renderOnce).  
+4) Conserver build CLI + GUI via `./scripts/dev_build.sh`.
 
-## Contexte actuel
-- GUI lancé via `RadiationSimGUI`, **viewport** = `QOpenGLWindow` dans un `QWidget::createWindowContainer(...)`.
-- `Renderer` est un en-tête "header-only" minimal (stub), `View3D` fait le clear + axes en GL immédiat.
-- `GeometryEditor`, `MaterialEditor`, `SensorEditor`, `SourceEditor` existent en stubs.
+## Contraintes techniques
+- Utiliser **uniquement** `QOpenGLContext::currentContext()->functions()` (pas `extraFunctions()`).
+- Pas de VAO/VBO obligatoires pour l’instant: on accepte du **mode immédiat** (glBegin/glEnd) si dispo; sinon, fournir un chemin “client-side arrays” simple.  
+- Ne pas réintroduire `glPolygonMode`, `glGenVertexArrays`, etc.  
+- Garder la compat Qt6 sur Linux (Ubuntu 24.04), GCC 13.
 
-## À faire (MVP)
-1. **Camera orbit**: rotation (drag gauche), pan (drag milieu), zoom (molette), reset (double-clic).
-2. **Grid** XY et axes XYZ (VAO simple, pas d’Immediate Mode si possible).
-3. **Renderer**: 
-   - fournir une API stateless : `beginFrame(viewProj)`, draw helpers (lines, boxes), `endFrame()`.
-   - ne pas dépendre de `QOpenGLWidget`; utiliser le contexte courant de `QOpenGLWindow`.
-4. **Scene preview**:
-   - dessiner bbox des `Object3D` (wireframe), gizmos pour sensors/sources.
-   - drapeau "wireframe" toggle depuis les actions déjà présentes.
-5. **Thread-safety**:
-   - aucune capture d’OpenGL depuis les threads de simulation; uniquement le thread GUI.
+## Fichiers à éditer
+- `include/visualization/Renderer.h`
+- `src/visualization/Renderer.cpp`
+- `src/visualization/View3D.cpp` (uniquement si ajustement mineur d’appels)
+- (optionnel) `src/ui/MainWindow.cpp` si nécessité de ne **pas** casser l’initialisation actuelle.
 
-## Contraintes
-- **Ne casse pas** `RadiationSimConsole`.
-- **CMake**: pas de Qt dans `RadiationCore`. Tout le Qt reste dans l’exe GUI.
-- **OpenMP**: inchangé.
-- **GLM**: optionnel (fallback `glm_simple.h`).
+## Détails d’implémentation
 
-## Acceptation
-- Build `scripts/dev_build.sh` OK (console + GUI).
-- GUI: viewport stable, axes+grille visibles, navigation fluide.
-- Pas de crash pendant une simulation (même si le rendu reste minimal).
+### A) Renderer.h
+- Confirmer l’API suivante (créer/compléter si manquante) :
+  ```cpp
+  class Renderer {
+  public:
+    Renderer(); ~Renderer();
 
-## Points bonus (si temps)
-- Frustum culling simple.
-- Mode “solid” vs “wireframe”.
+    void initialize(QWidget* w);    // pour QOpenGLWidget
+    void initialize(QWindow* win);  // pour QOpenGLWindow (View3D)
+    void setViewport(QWidget* w);   // no-op si QOpenGLWindow
+    void attachScene(std::shared_ptr<Scene> s);
 
-## Repères
-- Viewport: `include/visualization/View3D.h`, `src/visualization/View3D.cpp`
-- Renderer: `include/visualization/Renderer.h` (header-only)
-- MainWindow: `include/ui/MainWindow.h`, `src/ui/MainWindow.cpp`
+    void resize(int w, int h);
+    void beginFrame(const glm::mat4& viewProj);
+    void endFrame();
+    void renderOnce();
 
+    void setWireframe(bool on); bool wireframe() const;
+
+    // dessinateurs de debug
+    void drawGrid(float size, float step, float minorAlpha);
+    void drawAxes(float length);
+
+  private:
+    void ensureInitialized();
+    std::shared_ptr<Scene> m_scene{};
+    QWidget* m_viewport{nullptr};
+    QOpenGLFunctions* m_gl{nullptr};
+    bool m_wireframe{false};
+  };
