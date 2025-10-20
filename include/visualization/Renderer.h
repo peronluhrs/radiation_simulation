@@ -5,6 +5,7 @@
 #include <glm/vec3.hpp>
 
 #include <QWidget>
+#include <QWindow>
 #include <QOpenGLFunctions>
 #include <QOpenGLContext>
 
@@ -14,8 +15,6 @@ class Scene;
  * Renderer minimal et compatible GLES :
  * - Utilise uniquement QOpenGLFunctions (pas de VAO, pas de glPolygonMode).
  * - Fournit les méthodes attendues par View3D (stubs no-op pour le moment).
- *   => Codex pourra implémenter drawGrid/drawAxes/drawAABB/drawCross plus tard
- *      en VBO/shaders, sans fixed pipeline ni immediate mode.
  */
 class Renderer {
   public:
@@ -31,7 +30,8 @@ class Renderer {
     void renderOnce();
 
     // Méthodes attendues par View3D (alias / stubs)
-    void initialize(QWidget *w); // setViewport + ensureInitialized
+    void initialize(QWidget *w);   // setViewport + ensureInitialized (QOpenGLWidget)
+    void initialize(QWindow *win); // ensureInitialized (QOpenGLWindow)
     void setScene(std::shared_ptr<Scene> s) { attachScene(std::move(s)); }
     void setWireframeEnabled(bool on) { setWireframe(on); }
 
@@ -39,7 +39,7 @@ class Renderer {
     void setWireframe(bool on) { m_wireframe = on; }
     bool wireframe() const { return m_wireframe; }
 
-    // Stubs de dessin (pour compiler ; implémentation à faire par Codex)
+    // Stubs de dessin (pour compiler ; implémentations à faire plus tard)
     void drawGrid(float /*size*/, float /*step*/, float /*minorAlpha*/) {}
     void drawAxes(float /*length*/) {}
     void drawAABB(const glm::vec3 & /*minPt*/, const glm::vec3 & /*maxPt*/, const glm::vec3 & /*color*/) {}
@@ -49,8 +49,7 @@ class Renderer {
     void ensureInitialized();
 
     std::shared_ptr<Scene> m_scene;
-    QWidget *m_viewport = nullptr;
-
-    QOpenGLFunctions *m_gl = nullptr; // fonctions GL de base (toujours disponibles)
+    QWidget *m_viewport = nullptr;    // seulement si QWidget
+    QOpenGLFunctions *m_gl = nullptr; // fonctions GL de base (GLES/desktop)
     bool m_wireframe = false;
 };

@@ -19,6 +19,12 @@ void Renderer::initialize(QWidget *w) {
     ensureInitialized();
 }
 
+void Renderer::initialize(QWindow * /*win*/) {
+    // View3D est un QOpenGLWindow -> pas de QWidget à stocker
+    // On se contente de récupérer les fonctions à partir du contexte courant.
+    ensureInitialized();
+}
+
 void Renderer::attachScene(std::shared_ptr<Scene> scene) { m_scene = std::move(scene); }
 
 void Renderer::resize(int w, int h) {
