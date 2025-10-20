@@ -1,0 +1,29 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "default-release",
+      "displayName": "Release",
+      "generator": "Ninja",
+      "binaryDir": "build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "ENABLE_GUI": "ON"
+      }
+    },
+    {
+      "name": "default-debug",
+      "displayName": "Debug",
+      "generator": "Ninja",
+      "binaryDir": "build-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "ENABLE_GUI": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    { "name": "build-release", "configurePreset": "default-release" },
+    { "name": "build-debug",   "configurePreset": "default-debug" }
+  ]
+}
