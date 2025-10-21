@@ -3,6 +3,7 @@
 #include <memory>
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
 
 #include <QWidget>
 #include <QWindow>
@@ -42,8 +43,8 @@ class Renderer {
     // Stubs de dessin (pour compiler ; implémentations à faire plus tard)
     void drawGrid(float /*size*/, float /*step*/, float /*minorAlpha*/) {}
     void drawAxes(float /*length*/) {}
-    void drawAABB(const glm::vec3 & /*minPt*/, const glm::vec3 & /*maxPt*/, const glm::vec3 & /*color*/) {}
-    void drawCross(const glm::vec3 & /*p*/, float /*size*/, const glm::vec3 & /*color*/) {}
+    void drawAABB(const glm::vec3 & /*minPt*/, const glm::vec3 & /*maxPt*/, const glm::vec4 & /*color*/) {}
+    void drawCross(const glm::vec3 & /*p*/, float /*size*/, const glm::vec4 & /*color*/) {}
 
   private:
     void ensureInitialized();
