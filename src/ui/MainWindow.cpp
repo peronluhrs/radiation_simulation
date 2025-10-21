@@ -233,6 +233,10 @@ void MainWindow::setupMenus() {
     fileMenu->addSeparator();
 
     fileMenu->addAction("&Exporter résultats...", this, &MainWindow::exportResults);
+    QAction *importVtkAction = fileMenu->addAction("Importer maillage &VTK...", this, &MainWindow::importVtk);
+    importVtkAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_I));
+    importVtkAction->setStatusTip("Importer un maillage VTK (.vtk) et l’afficher dans la vue");
+    fileMenu->addSeparator();
     fileMenu->addSeparator();
     auto *exitAction = fileMenu->addAction("&Quitter", this, &QWidget::close);
     exitAction->setShortcut(QKeySequence::Quit);
@@ -287,30 +291,35 @@ void MainWindow::setupStatusBar() {
 void MainWindow::setupDockWidgets() {
     // Géométrie
     m_geometryDock = new QDockWidget("Géométrie", this);
+    m_geometryDock->setObjectName("dock_geometry");
     m_geometryEditor = new GeometryEditor(m_scene, this);
     m_geometryDock->setWidget(m_geometryEditor);
     addDockWidget(Qt::LeftDockWidgetArea, m_geometryDock);
 
     // Matériaux
     m_materialDock = new QDockWidget("Matériaux", this);
+    m_materialDock->setObjectName("dock_material");
     m_materialEditor = new MaterialEditor(m_scene, this);
     m_materialDock->setWidget(m_materialEditor);
     addDockWidget(Qt::LeftDockWidgetArea, m_materialDock);
 
     // Capteurs
     m_sensorDock = new QDockWidget("Capteurs", this);
+    m_sensorDock->setObjectName("dock_sensors");
     m_sensorEditor = new SensorEditor(m_scene, this);
     m_sensorDock->setWidget(m_sensorEditor);
     addDockWidget(Qt::RightDockWidgetArea, m_sensorDock);
 
     // Sources
     m_sourceDock = new QDockWidget("Sources", this);
+    m_sourceDock->setObjectName("dock_sources");
     m_sourceEditor = new SourceEditor(m_scene, this);
     m_sourceDock->setWidget(m_sourceEditor);
     addDockWidget(Qt::RightDockWidgetArea, m_sourceDock);
 
     // Résultats
     m_resultsDock = new QDockWidget("Résultats", this);
+    m_resultsDock->setObjectName("dock_results");
     m_sensorTree = new QTreeWidget(this);
     m_sensorTree->setHeaderLabels({"Capteur", "Valeur", "Unité"});
     m_resultsDock->setWidget(m_sensorTree);
@@ -318,6 +327,7 @@ void MainWindow::setupDockWidgets() {
 
     // Journal
     m_logDock = new QDockWidget("Journal", this);
+    m_logDock->setObjectName("dock_log");
     m_logText = new QTextEdit(this);
     m_logText->setReadOnly(true);
     m_logText->setMaximumHeight(150);
