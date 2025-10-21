@@ -31,6 +31,7 @@
 #include "common.h"
 #include "core/Scene.h"
 #include "simulation/MonteCarloEngine.h"
+#include "visualization/Renderer.h"
 
 // On n’inclut plus QOpenGLWidget ici : le viewport est un QWidget container
 // pour un QOpenGLWindow (View3D). Ça évite les conversions invalides.
@@ -53,6 +54,7 @@ class MainWindow : public QMainWindow {
     void closeEvent(QCloseEvent *event) override;
 
   private slots:
+    void importVtk();
     // Menu actions
     void newProject();
     void openProject();
@@ -94,6 +96,7 @@ class MainWindow : public QMainWindow {
     // Core components
     std::shared_ptr<Scene> m_scene;
     std::unique_ptr<MonteCarloEngine> m_engine;
+    std::unique_ptr<Renderer> m_renderer;
 
     // UI / rendu : container QWidget pour le QOpenGLWindow (View3D)
     QWidget *m_viewport = nullptr;

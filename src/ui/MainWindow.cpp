@@ -4,6 +4,7 @@
 #include "ui/MaterialEditor.h"
 #include "ui/SensorEditor.h"
 #include "ui/SourceEditor.h"
+#include "visualization/Renderer.h"
 #include <QHeaderView>
 #include <QApplication>
 #include <QFileDialog>
@@ -34,6 +35,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     // Core
     m_scene = std::make_shared<Scene>();
     m_engine = std::make_unique<MonteCarloEngine>(m_scene);
+
+    m_renderer = std::make_unique<Renderer>();
+    m_renderer->attachScene(m_scene);
     // UI
     setupUI();
     connectSignals();
@@ -98,7 +102,9 @@ void MainWindow::setupCentralWidget() {
 #endif
     m_viewport->setMinimumSize(600, 400);
 
-    // Panneau simulation (droite)
+    if (m_renderer)
+        m_renderer->initialize(m_viewport);
+    m_renderer->renderOnce(); // Panneau simulation (droite)
     m_simulationPanel = new QWidget(this);
     m_simulationPanel->setMaximumWidth(340);
     m_simulationPanel->setMinimumWidth(260);
@@ -108,7 +114,6 @@ void MainWindow::setupCentralWidget() {
     mainSplitter->addWidget(m_simulationPanel);
     mainSplitter->setStretchFactor(0, 1);
     mainSplitter->setStretchFactor(1, 0);
-
 }
 
 void MainWindow::setupSimulationPanel() {
@@ -613,5 +618,19 @@ void MainWindow::closeEvent(QCloseEvent *event) {
         event->accept();
     } else {
         event->ignore();
+    }
+}
+
+void MainWindow::importVtk() {
+    QString file = QFileDialog::getOpenFileName(this, "Importer VTK", "", "VTK Legacy (*.vtk)");
+    if (file.isEmpty())
+        return;
+    std::string err;
+    if (m_renderer && m_renderer->loadVtk(file.toStdString(), &err)) {
+        if (m_viewport)
+            m_viewport->update();
+        Log::info(std::string("VTK chargé: ") + file.toStdString());
+    } else {
+        QMessageBox::warning(this, "Import VTK", QString("Échec de chargement:\n%1").arg(QString::fromStdString(err)));
     }
 }
