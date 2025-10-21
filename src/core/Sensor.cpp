@@ -1,5 +1,6 @@
 #include "core/Sensor.h"
 #include "simulation/Particle.h"
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 
@@ -9,79 +10,98 @@ Sensor::Sensor(const std::string& name, SensorType type, const glm::vec3& positi
 }
 
 bool Sensor::detectsParticle(const Particle& particle) const {
-    if (!m_enabled) return false;
-    
-    // Filtre par type de radiation
-    if (!m_radiationFilter.empty()) {
-        bool typeMatch = false;
-        for (RadiationType type : m_radiationFilter) {
-            if (particle.getType() == type) {
-                typeMatch = true;
-                break;
-            }
-        }
-        if (!typeMatch) return false;
-    }
-    
-    // Filtre énergétique
-    float energy = particle.getEnergy();
-    if (energy < m_minEnergy || energy > m_maxEnergy) {
-        return false;
-    }
-    
+    if (!passesFilters(particle)) return false;
+
     // Test géométrique selon le type de capteur
     switch (m_type) {
         case SensorType::POINT: {
-            // Capteur ponctuel : détection si la particule passe "près"
             float distance = glm::length(particle.getPosition() - m_position);
-            return distance < 0.01f; // 1 cm de rayon effectif
+            return distance <= effectiveRadius();
         }
-        
+
         case SensorType::VOLUME: {
-            // Capteur volumique
             return pointInSensor(particle.getPosition());
         }
-        
+
         case SensorType::SURFACE: {
-            // Capteur surfacique : intersection avec la surface
             Ray particleRay = particle.getRay();
             float t;
             return rayIntersectsSensor(particleRay, t);
         }
     }
-    
+
     return false;
 }
 
 void Sensor::recordDetection(const Particle& particle) {
     if (!detectsParticle(particle)) return;
-    
-    // Enregistrement des statistiques
-    m_stats.totalCounts.fetch_add(1);
-    
-    // Par type de radiation
-    switch (particle.getType()) {
-        case RadiationType::GAMMA:
-        case RadiationType::X_RAY:
-            m_stats.gammaCounts.fetch_add(1);
-            break;
-        case RadiationType::NEUTRON:
-            m_stats.neutronCounts.fetch_add(1);
-            break;
-        case RadiationType::MUON:
-            m_stats.muonCounts.fetch_add(1);
-            break;
-        default:
-            break;
+
+    accumulateDetection(particle);
+}
+
+bool Sensor::intersectsSegment(const glm::vec3& p0, const glm::vec3& p1) const {
+    if (!m_enabled) return false;
+
+    switch (m_type) {
+        case SensorType::POINT: {
+            glm::vec3 segment = p1 - p0;
+            float segLenSq = glm::dot(segment, segment);
+            if (segLenSq <= 0.0f) {
+                return glm::length(p0 - m_position) <= effectiveRadius();
+            }
+
+            float t = glm::dot(m_position - p0, segment) / segLenSq;
+            t = std::clamp(t, 0.0f, 1.0f);
+            glm::vec3 closest = p0 + t * segment;
+            return glm::length(closest - m_position) <= effectiveRadius();
+        }
+
+        case SensorType::VOLUME:
+        case SensorType::SURFACE: {
+            glm::vec3 halfExtents = glm::max(m_size * 0.5f, glm::vec3(1e-4f));
+            glm::vec3 minBounds = m_position - halfExtents;
+            glm::vec3 maxBounds = m_position + halfExtents;
+
+            glm::vec3 d = p1 - p0;
+            float tMin = 0.0f;
+            float tMax = 1.0f;
+
+            for (int axis = 0; axis < 3; ++axis) {
+                float origin = p0[axis];
+                float direction = d[axis];
+                float minVal = minBounds[axis];
+                float maxVal = maxBounds[axis];
+
+                if (std::abs(direction) < 1e-8f) {
+                    if (origin < minVal || origin > maxVal) {
+                        return false;
+                    }
+                    continue;
+                }
+
+                float invDir = 1.0f / direction;
+                float t1 = (minVal - origin) * invDir;
+                float t2 = (maxVal - origin) * invDir;
+                if (t1 > t2) std::swap(t1, t2);
+
+                tMin = std::max(tMin, t1);
+                tMax = std::min(tMax, t2);
+                if (tMin > tMax) {
+                    return false;
+                }
+            }
+
+            return tMax >= 0.0f && tMin <= 1.0f;
+        }
     }
-    
-    // Énergie déposée (simplifiée : toute l'énergie est déposée)
-    double energy = static_cast<double>(particle.getEnergy());
-    m_stats.totalEnergy.fetch_add(energy);
-    
-    // Calcul de dose simplifié (approximation)
-    double dose = energy * 1.6e-16; // Conversion keV -> J, puis facteur de dose
-    m_stats.totalDose.fetch_add(dose);
+
+    return false;
+}
+
+void Sensor::recordParticle(const Particle& particle) {
+    if (!passesFilters(particle)) return;
+
+    accumulateDetection(particle);
 }
 
 double Sensor::getCountRate() const {
@@ -123,29 +143,82 @@ double Sensor::getAttenuationFactor(double incidentIntensity) const {
     return 0.0;
 }
 
+bool Sensor::passesFilters(const Particle& particle) const {
+    if (!m_enabled) return false;
+
+    if (!m_radiationFilter.empty()) {
+        bool typeMatch = false;
+        for (RadiationType type : m_radiationFilter) {
+            if (particle.getType() == type) {
+                typeMatch = true;
+                break;
+            }
+        }
+        if (!typeMatch) return false;
+    }
+
+    float energy = particle.getEnergy();
+    if (energy < m_minEnergy || energy > m_maxEnergy) {
+        return false;
+    }
+
+    return true;
+}
+
+void Sensor::accumulateDetection(const Particle& particle) {
+    m_stats.totalCounts.fetch_add(1);
+
+    switch (particle.getType()) {
+        case RadiationType::GAMMA:
+        case RadiationType::X_RAY:
+            m_stats.gammaCounts.fetch_add(1);
+            break;
+        case RadiationType::NEUTRON:
+            m_stats.neutronCounts.fetch_add(1);
+            break;
+        case RadiationType::MUON:
+            m_stats.muonCounts.fetch_add(1);
+            break;
+        default:
+            break;
+    }
+
+    double energy = static_cast<double>(particle.getEnergy());
+    m_stats.totalEnergy.fetch_add(energy);
+
+    double dose = energy * 1.6e-16;
+    m_stats.totalDose.fetch_add(dose);
+}
+
+float Sensor::effectiveRadius() const {
+    return std::max(m_radius, 1e-4f);
+}
+
 bool Sensor::pointInSensor(const glm::vec3& point) const {
     switch (m_type) {
         case SensorType::POINT: {
             float distance = glm::length(point - m_position);
-            return distance < m_radius;
+            return distance <= effectiveRadius();
         }
-        
+
         case SensorType::VOLUME: {
             // Volume rectangulaire centré sur la position
             glm::vec3 localPoint = point - m_position;
-            glm::vec3 halfSize = m_size * 0.5f;
-            
+            glm::vec3 halfSize = glm::max(m_size * 0.5f, glm::vec3(1e-4f));
+
             return (std::abs(localPoint.x) <= halfSize.x &&
                     std::abs(localPoint.y) <= halfSize.y &&
                     std::abs(localPoint.z) <= halfSize.z);
         }
-        
+
         case SensorType::SURFACE: {
             // Surface rectangulaire dans le plan XY
             glm::vec3 localPoint = point - m_position;
-            
-            return (std::abs(localPoint.x) <= m_size.x * 0.5f &&
-                    std::abs(localPoint.y) <= m_size.y * 0.5f &&
+
+            glm::vec3 halfSize = glm::max(m_size * 0.5f, glm::vec3(1e-4f));
+
+            return (std::abs(localPoint.x) <= halfSize.x &&
+                    std::abs(localPoint.y) <= halfSize.y &&
                     std::abs(localPoint.z) <= 0.01f); // Épaisseur de 2 cm
         }
     }
@@ -160,11 +233,12 @@ bool Sensor::rayIntersectsSensor(const Ray& ray, float& t) const {
             glm::vec3 oc = ray.origin - m_position;
             float a = glm::dot(ray.direction, ray.direction);
             float b = 2.0f * glm::dot(oc, ray.direction);
-            float c = glm::dot(oc, oc) - m_radius * m_radius;
-            
+            float radius = effectiveRadius();
+            float c = glm::dot(oc, oc) - radius * radius;
+
             float discriminant = b * b - 4 * a * c;
             if (discriminant < 0) return false;
-            
+
             float t1 = (-b - std::sqrt(discriminant)) / (2.0f * a);
             float t2 = (-b + std::sqrt(discriminant)) / (2.0f * a);
             
@@ -175,8 +249,9 @@ bool Sensor::rayIntersectsSensor(const Ray& ray, float& t) const {
         case SensorType::VOLUME:
         case SensorType::SURFACE: {
             // Intersection avec une boîte (AABB)
-            glm::vec3 minBounds = m_position - m_size * 0.5f;
-            glm::vec3 maxBounds = m_position + m_size * 0.5f;
+            glm::vec3 halfSize = glm::max(m_size * 0.5f, glm::vec3(1e-4f));
+            glm::vec3 minBounds = m_position - halfSize;
+            glm::vec3 maxBounds = m_position + halfSize;
             
             float tMin = (minBounds.x - ray.origin.x) / ray.direction.x;
             float tMax = (maxBounds.x - ray.origin.x) / ray.direction.x;
