@@ -106,7 +106,9 @@ if(ENABLE_GUI)
 
   src/ui/SourceEditor.cpp
 )
-  target_include_directories(RadiationSimGUI PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+  
+target_sources(RadiationSimGUI PRIVATE src/visualization/VtkLegacyLoader.cpp)
+target_include_directories(RadiationSimGUI PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
   target_link_libraries(RadiationSimGUI
     PRIVATE

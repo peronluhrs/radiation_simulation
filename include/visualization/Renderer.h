@@ -1,3 +1,4 @@
+#include "io/VtkLegacyLoader.h"
 #pragma once
 
 #include <memory>
@@ -18,6 +19,16 @@ class Scene;
  * - Fournit les méthodes attendues par View3D (stubs no-op pour le moment).
  */
 class Renderer {
+  public:
+    bool loadVtk(const std::string &path, std::string *err = nullptr);
+    void drawLoadedMesh();
+    struct LoadedMesh {
+        std::vector<glm::vec3> verts;
+        std::vector<std::array<int, 3>> tris;
+        std::vector<std::array<int, 2>> lines;
+        bool empty() const { return verts.empty(); }
+    };
+
   public:
     Renderer();
     ~Renderer();
@@ -47,6 +58,8 @@ class Renderer {
     void drawCross(const glm::vec3 & /*p*/, float /*size*/, const glm::vec4 & /*color*/) {}
 
   private:
+    VtkMesh m_vtkMesh; // maillage importé VTK
+    LoadedMesh m_mesh;
     void ensureInitialized();
 
     std::shared_ptr<Scene> m_scene;

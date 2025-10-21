@@ -1,0 +1,96 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"jsonFile" : "directory-.-Debug-f5ebdc15457944623624.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.16"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3,
+						4
+					]
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "RadiationSimulation",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3,
+						4
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "RadiationCore::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-RadiationCore-Debug-58dd3c8fcf1a3d4f5a5f.json",
+					"name" : "RadiationCore",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "RadiationSimConsole::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-RadiationSimConsole-Debug-253e28bdd336982ad4ea.json",
+					"name" : "RadiationSimConsole",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "RadiationSimGUI::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-RadiationSimGUI-Debug-7556dc82e1daf4fb48b4.json",
+					"name" : "RadiationSimGUI",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "RadiationSimGUI_autogen::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-RadiationSimGUI_autogen-Debug-4d81f4278de4d12cd58a.json",
+					"name" : "RadiationSimGUI_autogen",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "RadiationSimGUI_autogen_timestamp_deps::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-RadiationSimGUI_autogen_timestamp_deps-Debug-a1d48d309570e878c463.json",
+					"name" : "RadiationSimGUI_autogen_timestamp_deps",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/home/nanan/dev/radiation_simulation/build-debug",
+		"source" : "/home/nanan/dev/radiation_simulation"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 6
+	}
+}

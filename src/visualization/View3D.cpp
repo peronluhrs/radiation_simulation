@@ -73,6 +73,7 @@ void View3D::paintGL() {
 
     m_renderer->beginFrame(viewProj);
     m_renderer->drawGrid(20.0f, 1.0f, 0.25f);
+    m_renderer->drawLoadedMesh();
     m_renderer->drawAxes(1.5f);
     updateSceneHelpers();
     m_renderer->endFrame();
@@ -149,17 +150,12 @@ glm::mat4 View3D::buildProjectionMatrix() const {
 
 glm::vec3 View3D::cameraPosition() const {
     float cosPitch = std::cos(m_pitch);
-    glm::vec3 offset{
-        m_distance * cosPitch * std::cos(m_yaw),
-        m_distance * std::sin(m_pitch),
-        m_distance * cosPitch * std::sin(m_yaw)
-    };
+    glm::vec3 offset{m_distance * cosPitch * std::cos(m_yaw), m_distance * std::sin(m_pitch),
+                     m_distance * cosPitch * std::sin(m_yaw)};
     return m_target + offset;
 }
 
-void View3D::updateCursorTracking(const QPoint &pos) {
-    m_lastPos = pos;
-}
+void View3D::updateCursorTracking(const QPoint &pos) { m_lastPos = pos; }
 
 void View3D::updateSceneHelpers() {
     if (!m_scene || !m_renderer)
