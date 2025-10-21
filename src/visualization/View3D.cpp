@@ -45,6 +45,38 @@ void View3D::resetCamera() {
     update();
 }
 
+bool View3D::importVtkMesh(const QString &filePath, std::string *err) {
+    if (!m_renderer) {
+        if (err)
+            *err = "Renderer non initialisé";
+        return false;
+    }
+
+    std::string loaderError;
+    if (!m_renderer->loadVtk(filePath.toStdString(), &loaderError)) {
+        if (err)
+            *err = loaderError;
+        return false;
+    }
+
+    const AABB &bounds = m_renderer->meshBounds();
+    if (bounds.isValid()) {
+        m_target = bounds.center();
+        glm::vec3 size = bounds.size();
+        float radius = glm::length(size) * 0.5f;
+        float fov = glm::radians(45.0f);
+        if (radius > 0.0001f) {
+            float dist = radius / std::sin(fov * 0.5f);
+            m_distance = std::max(dist * 1.2f, 1.5f);
+        }
+    }
+
+    if (err)
+        err->clear();
+    update();
+    return true;
+}
+
 void View3D::initializeGL() {
     initializeOpenGLFunctions();
     glClearColor(0.08f, 0.09f, 0.11f, 1.0f);
