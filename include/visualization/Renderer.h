@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
@@ -9,8 +10,10 @@
 #include <QWindow>
 #include <QOpenGLFunctions>
 #include <QOpenGLContext>
+#include <QString>
 
 class Scene;
+class MeshObject;
 
 /**
  * Renderer minimal et compatible GLES :
@@ -36,6 +39,12 @@ class Renderer {
     void setScene(std::shared_ptr<Scene> s) { attachScene(std::move(s)); }
     void setWireframeEnabled(bool on) { setWireframe(on); }
 
+    struct MeshImportStats {
+        size_t vertexCount = 0;
+        size_t faceCount = 0;
+    };
+    std::optional<MeshImportStats> loadVtk(const QString &filePath, QString *errorMessage = nullptr);
+
     // Configuration “wireframe” (no-op pour l’instant sous GLES)
     void setWireframe(bool on) { m_wireframe = on; }
     bool wireframe() const { return m_wireframe; }
@@ -53,4 +62,5 @@ class Renderer {
     QWidget *m_viewport = nullptr;    // seulement si QWidget
     QOpenGLFunctions *m_gl = nullptr; // fonctions GL de base (GLES/desktop)
     bool m_wireframe = false;
+    std::weak_ptr<MeshObject> m_lastImportedMesh;
 };

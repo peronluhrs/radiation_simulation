@@ -14,6 +14,8 @@
 #include <QPixmap>
 #include <QStyle>
 #include <QFileInfo>
+#include <QKeySequence>
+#include <sstream>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGroupBox>
@@ -228,6 +230,8 @@ void MainWindow::setupMenus() {
     fileMenu->addSeparator();
 
     fileMenu->addAction("&Exporter résultats...", this, &MainWindow::exportResults);
+    auto *importVtkAction = fileMenu->addAction("Importer maillage &VTK...", this, &MainWindow::importVtk);
+    importVtkAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_I));
     fileMenu->addSeparator();
     auto *exitAction = fileMenu->addAction("&Quitter", this, &QWidget::close);
     exitAction->setShortcut(QKeySequence::Quit);
@@ -282,30 +286,35 @@ void MainWindow::setupStatusBar() {
 void MainWindow::setupDockWidgets() {
     // Géométrie
     m_geometryDock = new QDockWidget("Géométrie", this);
+    m_geometryDock->setObjectName("GeometryDock");
     m_geometryEditor = new GeometryEditor(m_scene, this);
     m_geometryDock->setWidget(m_geometryEditor);
     addDockWidget(Qt::LeftDockWidgetArea, m_geometryDock);
 
     // Matériaux
     m_materialDock = new QDockWidget("Matériaux", this);
+    m_materialDock->setObjectName("MaterialsDock");
     m_materialEditor = new MaterialEditor(m_scene, this);
     m_materialDock->setWidget(m_materialEditor);
     addDockWidget(Qt::LeftDockWidgetArea, m_materialDock);
 
     // Capteurs
     m_sensorDock = new QDockWidget("Capteurs", this);
+    m_sensorDock->setObjectName("SensorsDock");
     m_sensorEditor = new SensorEditor(m_scene, this);
     m_sensorDock->setWidget(m_sensorEditor);
     addDockWidget(Qt::RightDockWidgetArea, m_sensorDock);
 
     // Sources
     m_sourceDock = new QDockWidget("Sources", this);
+    m_sourceDock->setObjectName("SourcesDock");
     m_sourceEditor = new SourceEditor(m_scene, this);
     m_sourceDock->setWidget(m_sourceEditor);
     addDockWidget(Qt::RightDockWidgetArea, m_sourceDock);
 
     // Résultats
     m_resultsDock = new QDockWidget("Résultats", this);
+    m_resultsDock->setObjectName("ResultsDock");
     m_sensorTree = new QTreeWidget(this);
     m_sensorTree->setHeaderLabels({"Capteur", "Valeur", "Unité"});
     m_resultsDock->setWidget(m_sensorTree);
@@ -313,6 +322,7 @@ void MainWindow::setupDockWidgets() {
 
     // Journal
     m_logDock = new QDockWidget("Journal", this);
+    m_logDock->setObjectName("LogDock");
     m_logText = new QTextEdit(this);
     m_logText->setReadOnly(true);
     m_logText->setMaximumHeight(150);
@@ -457,6 +467,40 @@ void MainWindow::exportResults() {
         // TODO: export réel
         Log::info("Résultats exportés vers: " + filename.toStdString());
     }
+}
+
+void MainWindow::importVtk() {
+#ifdef HAS_QOPENGLWIDGET
+    if (!m_view3D) {
+        QMessageBox::critical(this, "Erreur", "Le moteur de rendu 3D n'est pas disponible.");
+        return;
+    }
+#else
+    if (!m_view3D) {
+        QMessageBox::critical(this, "Erreur", "L'import VTK nécessite le module de rendu 3D.");
+        return;
+    }
+#endif
+
+    QString filename = QFileDialog::getOpenFileName(this, "Importer un maillage VTK", "", "Fichiers VTK (*.vtk)");
+    if (filename.isEmpty())
+        return;
+
+    QString errorMessage;
+    auto result = m_view3D->importVtkMesh(filename, &errorMessage);
+    if (!result.has_value()) {
+        if (errorMessage.isEmpty())
+            errorMessage = "Erreur inconnue.";
+        QMessageBox::critical(this, "Erreur", QString("Impossible d'importer le maillage VTK :\n%1").arg(errorMessage));
+        return;
+    }
+
+    setProjectModified();
+
+    std::ostringstream oss;
+    oss << "Maillage VTK importé: " << filename.toStdString() << " (" << result->vertexCount
+        << " sommets, " << result->faceCount << " faces)";
+    Log::info(oss.str());
 }
 
 // Vue

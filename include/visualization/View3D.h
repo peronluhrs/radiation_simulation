@@ -1,5 +1,8 @@
 #pragma once
 #include <memory>
+#include <optional>
+
+#include <QString>
 
 #if __has_include(<QOpenGLWindow>) && __has_include(<QOpenGLFunctions>)
 #include <QOpenGLWindow>
@@ -27,6 +30,13 @@ class View3D : public QOpenGLWindow, protected QOpenGLFunctions {
     ~View3D() override = default;
 
     void setScene(std::shared_ptr<Scene> scene);
+
+    struct MeshImportStats {
+        size_t vertexCount = 0;
+        size_t faceCount = 0;
+    };
+
+    std::optional<MeshImportStats> importVtkMesh(const QString &filePath, QString *errorMessage = nullptr);
 
     void setWireframeEnabled(bool enabled);
     void setShowSensors(bool enabled);
