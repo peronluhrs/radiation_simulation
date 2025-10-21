@@ -1,0 +1,25 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "vscode-release",
+      "displayName": "VSCode • Release",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build/vscode-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "ENABLE_GUI": "ON",
+        "CMAKE_PREFIX_PATH": "/usr/lib/x86_64-linux-gnu/cmake/Qt6"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "vscode-release",
+      "configurePreset": "vscode-release",
+      "jobs": 0
+    }
+  ],
+  "testPresets": []
+}

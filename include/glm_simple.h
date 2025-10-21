@@ -1,15 +1,25 @@
 #pragma once
 
 // Implémentation simplifiée de GLM pour la démonstration
-#ifndef USE_BASIC_MATH
-
-// Si GLM est disponible, l'utiliser
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/quaternion.hpp>
-#include <glm/gtx/norm.hpp>
-
+#if !defined(USE_BASIC_MATH)
+#  if defined(__has_include)
+#    if __has_include(<glm/glm.hpp>)
+#      include <glm/glm.hpp>
+#      include <glm/gtc/matrix_transform.hpp>
+#      include <glm/gtc/quaternion.hpp>
+#      include <glm/gtx/norm.hpp>
+#      include <glm/gtc/type_ptr.hpp>
+#    else
+#      define USE_BASIC_MATH 1
+#    endif
+#  else
+#    define USE_BASIC_MATH 1
+#  endif
 #else
+#  define USE_BASIC_MATH 1
+#endif
+
+#ifdef USE_BASIC_MATH
 
 // Implémentation de base des vecteurs et matrices
 #include <cmath>
@@ -138,6 +148,10 @@ namespace glm {
         return std::min(std::max(x, minVal), maxVal);
     }
     
+    inline float radians(float degrees) {
+        return degrees * static_cast<float>(M_PI / 180.0);
+    }
+
     inline mat4 translate(const mat4& m, const vec3& v) {
         mat4 result = m;
         result.m[3] += v.x;
@@ -154,6 +168,32 @@ namespace glm {
         return result;
     }
     
+    inline mat4 perspective(float fovyRadians, float aspect, float zNear, float zFar) {
+        mat4 result(0.0f);
+        float f = 1.0f / std::tan(fovyRadians * 0.5f);
+        result.m[0] = f / aspect;
+        result.m[5] = f;
+        result.m[10] = (zFar + zNear) / (zNear - zFar);
+        result.m[11] = -1.0f;
+        result.m[14] = (2.0f * zFar * zNear) / (zNear - zFar);
+        return result;
+    }
+
+    inline mat4 lookAt(const vec3& eye, const vec3& center, const vec3& up) {
+        vec3 f = normalize(center - eye);
+        vec3 s = normalize(cross(f, up));
+        vec3 u = cross(s, f);
+
+        mat4 result(1.0f);
+        result.m[0] = s.x; result.m[4] = s.y; result.m[8] = s.z;
+        result.m[1] = u.x; result.m[5] = u.y; result.m[9] = u.z;
+        result.m[2] = -f.x; result.m[6] = -f.y; result.m[10] = -f.z;
+        result.m[3] = -dot(s, eye);
+        result.m[7] = -dot(u, eye);
+        result.m[11] = dot(f, eye);
+        return result;
+    }
+
     inline mat4 transpose(const mat4& m) {
         mat4 result;
         for (int i = 0; i < 4; ++i) {
