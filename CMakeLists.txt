@@ -83,12 +83,18 @@ if(ENABLE_GUI)
     include/ui/MainWindow.h
     src/visualization/View3D.cpp
     include/visualization/View3D.h
+    src/visualization/VtkLegacyLoader.cpp
+    include/visualization/VtkLegacyLoader.h
   )
 
   add_executable(RadiationSimGUI ${GUI_SRC}
   include/visualization/Renderer.h
 
   src/visualization/Renderer.cpp
+
+  include/visualization/VtkLegacyLoader.h
+
+  src/visualization/VtkLegacyLoader.cpp
 
   include/ui/GeometryEditor.h
 

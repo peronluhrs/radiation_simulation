@@ -216,6 +216,12 @@ void MainWindow::setupMenus() {
     openAction->setShortcut(QKeySequence::Open);
     openAction->setIcon(style()->standardIcon(QStyle::SP_DirOpenIcon));
 
+    m_importVtkAction = fileMenu->addAction("Importer &VTK...", this, &MainWindow::importVtk);
+    if (m_view3D)
+        m_importVtkAction->setEnabled(true);
+    else if (m_importVtkAction)
+        m_importVtkAction->setEnabled(false);
+
     fileMenu->addSeparator();
 
     auto *saveAction = fileMenu->addAction("&Sauvegarder", this, &MainWindow::saveProject);
@@ -269,6 +275,32 @@ void MainWindow::setupToolbars() {
     tb->addAction(style()->standardIcon(QStyle::SP_MediaStop), "Arrêter", this, &MainWindow::stopSimulation);
     tb->addSeparator();
     tb->addAction("Reset caméra", this, &MainWindow::resetCamera);
+}
+
+void MainWindow::importVtk() {
+    if (!m_view3D) {
+        QMessageBox::warning(this, tr("Import VTK"), tr("Le rendu 3D n'est pas disponible sur cette plateforme."));
+        return;
+    }
+
+    const QString filter = tr("Fichiers VTK (*.vtk)");
+    QString filePath = QFileDialog::getOpenFileName(this, tr("Importer un fichier VTK"), QString(), filter);
+    if (filePath.isEmpty())
+        return;
+
+    std::string error;
+    if (!m_view3D->importVtkMesh(filePath, &error)) {
+        QString message = error.empty() ? tr("Impossible de charger le fichier VTK sélectionné.") : QString::fromStdString(error);
+        QMessageBox::critical(this, tr("Import VTK"), message);
+        Log::error("Import VTK échoué: " + filePath.toStdString() + (error.empty() ? std::string() : (" (" + error + ")")));
+        return;
+    }
+
+    QFileInfo info(filePath);
+    const QString status = tr("Maillage VTK chargé: %1").arg(info.fileName());
+    statusBar()->showMessage(status, 5000);
+    if (m_viewport)
+        m_viewport->update();
 }
 
 void MainWindow::setupStatusBar() {

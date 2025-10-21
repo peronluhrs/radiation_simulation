@@ -59,6 +59,7 @@ class MainWindow : public QMainWindow {
     void saveProject();
     void saveProjectAs();
     void exportResults();
+    void importVtk();
 
     // Simulation control
     void startSimulation();
@@ -142,6 +143,7 @@ class MainWindow : public QMainWindow {
     QAction *m_wireframeAction = nullptr;
     QAction *m_showSensorsAction = nullptr;
     QAction *m_showSourcesAction = nullptr;
+    QAction *m_importVtkAction = nullptr;
 
     QTimer *m_statusTimer = nullptr;
 

@@ -18,6 +18,7 @@ class QPoint;
 class Renderer;
 #endif
 
+class QString;
 class Scene;
 
 class View3D : public QOpenGLWindow, protected QOpenGLFunctions {
@@ -32,6 +33,7 @@ class View3D : public QOpenGLWindow, protected QOpenGLFunctions {
     void setShowSensors(bool enabled);
     void setShowSources(bool enabled);
     void resetCamera();
+    bool importVtkMesh(const QString &filePath, std::string *err = nullptr);
 
   protected:
     void initializeGL() override;
