@@ -1,8 +1,11 @@
 #include "utils/Random.h"
 #include "simulation/MonteCarloEngine.h"
 #include "simulation/Particle.h"
+#include "core/Material.h"
 #include <algorithm>
+#include <cmath>
 #include <future>
+#include <limits>
 
 // Générateur aléatoire thread-local pour le moteur Monte Carlo
 thread_local std::mt19937 MonteCarloEngine::s_rng(std::random_device{}());
@@ -10,6 +13,7 @@ thread_local std::mt19937 MonteCarloEngine::s_rng(std::random_device{}());
 MonteCarloEngine::MonteCarloEngine(std::shared_ptr<Scene> scene)
     : m_scene(scene)
 {
+    m_worldMaterial = MaterialLibrary::getInstance().getMaterial("Air");
 }
 
 MonteCarloEngine::~MonteCarloEngine()
@@ -190,6 +194,11 @@ void MonteCarloEngine::transportParticleInternal(Particle &particle)
 {
     m_stats.particlesTransported.fetch_add(1);
 
+    if (!particle.getCurrentMaterial() && m_worldMaterial)
+    {
+        particle.setCurrentMaterial(m_worldMaterial);
+    }
+
     uint32_t bounceCount = 0;
 
     while (particle.isActive() && bounceCount < m_config.maxBounces)
@@ -248,43 +257,75 @@ void MonteCarloEngine::transportParticleInternal(Particle &particle)
 
 bool MonteCarloEngine::stepParticle(Particle &particle)
 {
-    // Intersection avec la géométrie
+    glm::vec3 startPos = particle.getPosition();
+    auto currentMaterial = particle.getCurrentMaterial();
+
+    float mu = 0.0f;
+    if (currentMaterial)
+    {
+        mu = currentMaterial->getLinearAttenuationPerMeter(particle.getType(), particle.getEnergy());
+    }
+
+    float freePath = std::numeric_limits<float>::infinity();
+    if (mu > 0.0f)
+    {
+        float xi = RandomGenerator::random();
+        xi = std::clamp(xi, 1e-6f, 1.0f - 1e-6f);
+        freePath = -std::log(1.0f - xi) / mu;
+    }
+
     Ray ray = particle.getRay();
     IntersectionResult hit = m_scene->intersectRay(ray);
     m_stats.rayIntersections.fetch_add(1);
 
-    if (!hit.hit)
+    float boundaryDistance = hit.hit ? hit.distance : std::numeric_limits<float>::infinity();
+    float stepDistance = std::min(freePath, boundaryDistance);
+
+    if (!std::isfinite(stepDistance) || stepDistance <= 0.0f)
     {
-        // Pas d'intersection - particule s'échappe
         particle.escape();
         return false;
     }
 
-    // Déplacement jusqu'au point d'intersection
-    particle.move(hit.distance);
-    particle.setCurrentMaterial(hit.material);
+    particle.move(stepDistance);
+    glm::vec3 endPos = particle.getPosition();
 
-    // Vérification des capteurs le long du trajet
-    auto sensors = m_scene->getAllSensors();
-    for (auto &sensor : sensors)
+    const auto &sensors = m_scene->getAllSensors();
+    for (const auto &sensor : sensors)
     {
-        if (sensor->detectsParticle(particle))
+        if (sensor && sensor->intersectsSegment(startPos, endPos))
         {
-            sensor->recordDetection(particle);
-            if (particle.getState() == ParticleState::DETECTED)
-            {
-                return false;
-            }
+            sensor->recordParticle(particle);
         }
     }
 
-    // Interaction avec le matériau
-    if (hit.material)
+    if (freePath < boundaryDistance)
     {
-        InteractionType interaction = sampleInteraction(particle, hit.material);
-        processInteraction(particle, interaction, hit.material);
-        m_stats.totalCollisions.fetch_add(1);
+        if (currentMaterial)
+        {
+            InteractionType interaction = sampleInteraction(particle, currentMaterial);
+            processInteraction(particle, interaction, currentMaterial);
+            m_stats.totalCollisions.fetch_add(1);
+        }
+        return particle.isActive();
     }
+
+    if (!hit.hit)
+    {
+        particle.escape();
+        return false;
+    }
+
+    if (currentMaterial && hit.material == currentMaterial)
+    {
+        particle.setCurrentMaterial(m_worldMaterial);
+    }
+    else
+    {
+        particle.setCurrentMaterial(hit.material ? hit.material : m_worldMaterial);
+    }
+
+    particle.move(1e-4f);
 
     return particle.isActive();
 }

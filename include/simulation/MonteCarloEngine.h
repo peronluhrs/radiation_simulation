@@ -99,6 +99,7 @@ public:
 
 private:
     std::shared_ptr<Scene> m_scene;
+    std::shared_ptr<Material> m_worldMaterial;
     SimulationConfig m_config;
     SimulationStats m_stats;
     SimulationState m_state = SimulationState::IDLE;

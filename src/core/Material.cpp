@@ -57,15 +57,26 @@ float Material::getLinearAttenuation(RadiationType type, float energy) const {
 float Material::getMassAttenuation(RadiationType type, float energy) const {
     auto it = m_attenuationTables.find(type);
     if (it == m_attenuationTables.end()) return 0.0f;
-    
+
     return interpolateAttenuation(it->second, energy,
         [](const AttenuationData& data) { return data.massCoeff; });
+}
+
+float Material::getLinearAttenuationPerMeter(RadiationType type, float energy) const {
+    float massCoeff = getMassAttenuation(type, energy); // cm^2/g
+    if (massCoeff > 0.0f && m_density > 0.0f) {
+        float muCmInv = massCoeff * m_density; // cm^-1
+        return muCmInv * 100.0f; // m^-1
+    }
+
+    float linearCmInv = getLinearAttenuation(type, energy); // cm^-1 (fallback)
+    return linearCmInv * 100.0f; // m^-1
 }
 
 float Material::getCrossSection(RadiationType type, float energy) const {
     auto it = m_attenuationTables.find(type);
     if (it == m_attenuationTables.end()) return 0.0f;
-    
+
     return interpolateAttenuation(it->second, energy,
         [](const AttenuationData& data) { return data.crossSection; });
 }
@@ -131,7 +142,7 @@ InteractionType Material::sampleInteraction(RadiationType type, float energy) co
 }
 
 float Material::getMeanFreePath(RadiationType type, float energy) const {
-    float mu = getLinearAttenuation(type, energy);
+    float mu = getLinearAttenuationPerMeter(type, energy);
     return mu > 0.0f ? 1.0f / mu : std::numeric_limits<float>::max();
 }
 

@@ -102,7 +102,9 @@ public:
 
     // Détection
     bool detectsParticle(const Particle& particle) const;
+    bool intersectsSegment(const glm::vec3& p0, const glm::vec3& p1) const;
     void recordDetection(const Particle& particle);
+    void recordParticle(const Particle& particle);
     
     // Statistiques
     const DetectionStats& getStats() const { return m_stats; }
@@ -130,7 +132,7 @@ private:
     glm::vec3 m_position{0.0f};
     glm::vec3 m_orientation{0.0f, 0.0f, 1.0f};
     glm::vec3 m_size{1.0f}; // Pour capteurs volumiques
-    float m_radius = 1.0f;  // Pour capteurs sphériques
+    float m_radius = 0.05f;  // Pour capteurs sphériques (m)
     
     // Configuration
     bool m_enabled = true;
@@ -149,6 +151,9 @@ private:
     // Tests géométriques
     bool pointInSensor(const glm::vec3& point) const;
     bool rayIntersectsSensor(const Ray& ray, float& t) const;
+    bool passesFilters(const Particle& particle) const;
+    void accumulateDetection(const Particle& particle);
+    float effectiveRadius() const;
 };
 
 // Gestionnaire de capteurs

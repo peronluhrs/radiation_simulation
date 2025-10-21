@@ -265,34 +265,46 @@ private:
         
         if (lead && concrete) {
             float energy = 662.0f; // keV Cs-137
-            
+
             // Coefficients d'atténuation
-            float muLead = lead->getLinearAttenuation(RadiationType::GAMMA, energy);
-            float muConcrete = concrete->getLinearAttenuation(RadiationType::GAMMA, energy);
-            
+            float muLead_m = lead->getLinearAttenuationPerMeter(RadiationType::GAMMA, energy);
+            float muConcrete_m = concrete->getLinearAttenuationPerMeter(RadiationType::GAMMA, energy);
+            float muLead_cm = muLead_m / 100.0f;
+            float muConcrete_cm = muConcrete_m / 100.0f;
+
+            float leadThicknessM = 0.05f;
+            float concreteThicknessM = 0.3f;
+
+            if (auto leadObject = std::dynamic_pointer_cast<Box>(scene->getObject("Mur_Plomb"))) {
+                leadThicknessM = leadObject->getDepth();
+            }
+            if (auto concreteObject = std::dynamic_pointer_cast<Box>(scene->getObject("Mur_Beton"))) {
+                concreteThicknessM = concreteObject->getDepth();
+            }
+
+            float leadThicknessCm = leadThicknessM * 100.0f;
+            float concreteThicknessCm = concreteThicknessM * 100.0f;
+
             std::cout << "Coefficients d'atténuation à " << energy << " keV:" << std::endl;
-            std::cout << "  Plomb:  μ = " << std::fixed << std::setprecision(3) 
-                      << muLead << " cm⁻¹" << std::endl;
-            std::cout << "  Béton:  μ = " << std::fixed << std::setprecision(3) 
-                      << muConcrete << " cm⁻¹" << std::endl;
+            std::cout << "  Plomb:  μ = " << std::fixed << std::setprecision(3)
+                      << muLead_cm << " cm⁻¹" << std::endl;
+            std::cout << "  Béton:  μ = " << std::fixed << std::setprecision(3)
+                      << muConcrete_cm << " cm⁻¹" << std::endl;
             std::cout << std::endl;
-            
+
             // Atténuation théorique
-            float leadThickness = 0.05f; // 5 cm
-            float concreteThickness = 0.3f; // 30 cm
-            
-            float leadAttenuation = std::exp(-muLead * leadThickness);
-            float concreteAttenuation = std::exp(-muConcrete * concreteThickness);
+            float leadAttenuation = std::exp(-muLead_cm * leadThicknessCm);
+            float concreteAttenuation = std::exp(-muConcrete_cm * concreteThicknessCm);
             float totalAttenuation = leadAttenuation * concreteAttenuation;
-            
+
             std::cout << "Atténuation théorique (loi exponentielle):" << std::endl;
-            std::cout << "  Plomb (" << leadThickness << " cm):      " 
-                      << std::fixed << std::setprecision(6) << leadAttenuation 
+            std::cout << "  Plomb (" << leadThicknessCm << " cm):      "
+                      << std::fixed << std::setprecision(6) << leadAttenuation
                       << " (" << std::setprecision(1) << (1.0f - leadAttenuation) * 100.0f << "% d'atténuation)" << std::endl;
-            std::cout << "  Béton (" << concreteThickness << " cm):     " 
-                      << std::fixed << std::setprecision(6) << concreteAttenuation 
+            std::cout << "  Béton (" << concreteThicknessCm << " cm):     "
+                      << std::fixed << std::setprecision(6) << concreteAttenuation
                       << " (" << std::setprecision(1) << (1.0f - concreteAttenuation) * 100.0f << "% d'atténuation)" << std::endl;
-            std::cout << "  Total (Pb + Béton):    " 
+            std::cout << "  Total (Pb + Béton):    "
                       << std::fixed << std::setprecision(6) << totalAttenuation 
                       << " (" << std::setprecision(1) << (1.0f - totalAttenuation) * 100.0f << "% d'atténuation)" << std::endl;
             

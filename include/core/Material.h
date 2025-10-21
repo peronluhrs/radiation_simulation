@@ -37,6 +37,7 @@ public:
     void addAttenuationData(RadiationType type, float energy, float linearCoeff, float massCoeff = 0.0f, float crossSection = 0.0f);
     float getLinearAttenuation(RadiationType type, float energy) const;
     float getMassAttenuation(RadiationType type, float energy) const;
+    float getLinearAttenuationPerMeter(RadiationType type, float energy) const;
     float getCrossSection(RadiationType type, float energy) const;
 
     // Interaction des particules
