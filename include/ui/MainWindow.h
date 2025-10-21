@@ -59,6 +59,7 @@ class MainWindow : public QMainWindow {
     void saveProject();
     void saveProjectAs();
     void exportResults();
+    void importVtk();
 
     // Simulation control
     void startSimulation();

@@ -1,8 +1,13 @@
 #include "visualization/Renderer.h"
+#include "visualization/VtkLegacyLoader.h"
 #include "core/Scene.h"
+#include "geometry/MeshObject.h"
 
+#include <QFileInfo>
 #include <QOpenGLContext>
 #include <QSurfaceFormat>
+
+#include <string>
 
 // Implémentation minimaliste, compatible GLES :
 // - pas de VAO / glPolygonMode
@@ -54,6 +59,51 @@ void Renderer::endFrame() {
 
     // Ici viendront les draw calls (grille, axes, etc.) lorsque Codex les ajoutera
     // via VBOs / GL_LINES compatibles GLES et desktop.
+}
+
+std::optional<Renderer::MeshImportStats> Renderer::loadVtk(const QString &filePath, QString *errorMessage) {
+    if (filePath.isEmpty()) {
+        if (errorMessage)
+            *errorMessage = QStringLiteral("Chemin de fichier vide.");
+        return std::nullopt;
+    }
+
+    if (!m_scene) {
+        if (errorMessage)
+            *errorMessage = QStringLiteral("Aucune scène n'est attachée au moteur de rendu.");
+        return std::nullopt;
+    }
+
+    std::string loaderError;
+    auto meshData = VtkLegacyLoader::load(filePath.toStdString(), loaderError);
+    if (!meshData.has_value()) {
+        if (errorMessage)
+            *errorMessage = QString::fromStdString(loaderError);
+        return std::nullopt;
+    }
+
+    QFileInfo info(filePath);
+    QString baseName = info.baseName();
+    if (baseName.isEmpty())
+        baseName = info.completeBaseName();
+    if (baseName.isEmpty())
+        baseName = info.fileName();
+    if (baseName.isEmpty())
+        baseName = QStringLiteral("MaillageVTK");
+
+    auto mesh = std::make_shared<MeshObject>(baseName.toStdString(), std::move(meshData->vertices),
+                                             std::move(meshData->indices));
+    mesh->setColor(glm::vec3(0.6f, 0.7f, 0.9f));
+
+    m_scene->removeObject(mesh->getName());
+    m_scene->addObject(mesh);
+    m_scene->updateAccelerationStructure();
+    m_lastImportedMesh = mesh;
+
+    renderOnce();
+
+    MeshImportStats stats{mesh->getVertexCount(), mesh->getTriangleCount()};
+    return stats;
 }
 
 void Renderer::renderOnce() {

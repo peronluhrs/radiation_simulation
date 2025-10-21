@@ -20,6 +20,21 @@ void View3D::setScene(std::shared_ptr<Scene> scene) {
     update();
 }
 
+std::optional<View3D::MeshImportStats> View3D::importVtkMesh(const QString &filePath, QString *errorMessage) {
+    if (!m_renderer) {
+        if (errorMessage)
+            *errorMessage = QStringLiteral("Renderer non initialisé.");
+        return std::nullopt;
+    }
+
+    auto stats = m_renderer->loadVtk(filePath, errorMessage);
+    if (!stats.has_value())
+        return std::nullopt;
+
+    update();
+    return MeshImportStats{stats->vertexCount, stats->faceCount};
+}
+
 void View3D::setWireframeEnabled(bool enabled) {
     m_wireframe = enabled;
     if (m_renderer)

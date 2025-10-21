@@ -90,6 +90,10 @@ if(ENABLE_GUI)
 
   src/visualization/Renderer.cpp
 
+  include/visualization/VtkLegacyLoader.h
+
+  src/visualization/VtkLegacyLoader.cpp
+
   include/ui/GeometryEditor.h
 
   include/ui/MaterialEditor.h
